@@ -1,4 +1,4 @@
-const CACHE_NAME = "darts-trainer-v1";
+const CACHE_NAME = "darts-trainer-v5";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
