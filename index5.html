@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Darts Trainer</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b0b0b; color: #f2f2f2; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 18px; }
+    .card { background: #151515; border: 1px solid #2a2a2a; border-radius: 18px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+    h1 { font-size: 20px; margin: 0 0 10px; letter-spacing: .2px; }
+
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+
+    label { display: block; font-size: 12px; opacity: .85; margin-bottom: 6px; }
+    input, select, button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      color: #f2f2f2;
+      padding: 12px 12px;
+      font-size: 16px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #5a5a5a; }
+    button { background: #1f1f1f; font-weight: 700; }
+    button:active { transform: scale(.99); }
+
+    .big { font-size: 44px; font-weight: 900; line-height: 1; margin: 6px 0 10px; }
+    .pill { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #101010; border: 1px solid #2a2a2a; font-size: 12px; opacity: .95; }
+    .subpill { margin-top: -4px; font-size: 12px; opacity: .85; }
+    .msg { margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid #2a2a2a; background: #0f0f0f; }
+    .ok { border-color: #1f6d3a; }
+    .bad { border-color: #8a2a2a; }
+    .muted { opacity: .85; font-size: 12px; }
+    .spacer { height: 12px; }
+    .btnrow { display: flex; gap: 10px; }
+    .btnrow button { flex: 1; }
+
+    /* Settings */
+    .settings {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: #101010;
+      border: 1px solid #2a2a2a;
+    }
+    .settings h2 { font-size: 14px; margin: 0 0 10px; opacity: .9; letter-spacing: .2px; }
+    .toggles { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 14px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      padding: 10px 12px;
+    }
+    .toggle .ttext { font-size: 13px; opacity: .92; }
+    .toggle input[type="checkbox"] {
+      width: 22px; height: 22px;
+      accent-color: #ffffff;
+    }
+
+    /* Stats */
+    .stats {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: #101010;
+      border: 1px solid #2a2a2a;
+    }
+    .stats h2 { font-size: 14px; margin: 0 0 10px; opacity: .9; letter-spacing: .2px; }
+    .statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat { border-radius: 14px; border: 1px solid #2a2a2a; background: #0f0f0f; padding: 10px; }
+    .stat .k { font-size: 11px; opacity: .85; }
+    .stat .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    .hint { margin-top: 10px; font-size: 12px; opacity: .8; }
+
+    .checkoutLine { margin-top: 6px; font-size: 13px; opacity: .9; }
+    .checkoutLine b { opacity: 1; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>🎯 Darts Trainer</h1>
+
+      <div class="row">
+        <div>
+          <label>Start</label>
+          <select id="startScore">
+            <option value="501" selected>501</option>
+            <option value="301">301</option>
+          </select>
+        </div>
+        <div>
+          <label>Max visit</label>
+          <select id="maxThrow">
+            <option value="60">60 (Easy)</option>
+            <option value="120">120 (Mid)</option>
+            <option value="180" selected>180 (Normal)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="row">
+        <div>
+          <div class="pill">Player total</div>
+          <div id="remaining" class="big">501</div>
+          <div id="checkoutLine" class="checkoutLine muted"></div>
+        </div>
+
+        <div style="text-align:right">
+          <div class="pill">Visit total</div>
+          <div id="throw" class="big">—</div>
+          <div class="subpill">Last dart: <b id="lastDart">—</b></div>
+        </div>
+      </div>
+
+      <label>Your answer (new total)</label>
+      <input id="answer" inputmode="numeric" pattern="[0-9]*" placeholder="Type the new total…" />
+
+      <div class="spacer"></div>
+
+      <div class="btnrow">
+        <button id="checkBtn">Check</button>
+        <button id="nextBtn" title="Generate a new visit">Next throw</button>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="btnrow">
+        <button id="resetBtn">Reset</button>
+        <button id="revealBtn">Reveal answer</button>
+      </div>
+
+      <div id="message" class="msg muted">
+        Tap <b>Next throw</b> to begin.
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="settings" aria-label="Settings">
+        <h2>⚙️ Options</h2>
+        <div class="toggles">
+          <div class="toggle">
+            <div class="ttext"><b>Double out</b> (must finish on a double)</div>
+            <input id="optDoubleOut" type="checkbox" checked>
+          </div>
+          <div class="toggle">
+            <div class="ttext"><b>Bust rules</b> (below 0 / leave 1 / 0 without double)</div>
+            <input id="optBust" type="checkbox" checked>
+          </div>
+          <div class="toggle">
+            <div class="ttext"><b>Show suggested checkout</b> (when on a finish)</div>
+            <input id="optSuggest" type="checkbox" checked>
+          </div>
+        </div>
+        <div class="hint">
+          Core rule stays the same: only correct answers reduce your total. If bust rules are ON, an invalid finish becomes a bust (score resets to start of the turn).
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats" aria-label="Stats">
+        <h2>📊 Stats</h2>
+        <div class="statgrid">
+          <div class="stat"><div class="k">Turns</div><div class="v" id="stTurns">0</div></div>
+          <div class="stat"><div class="k">Correct</div><div class="v" id="stCorrect">0</div></div>
+          <div class="stat"><div class="k">Wrong</div><div class="v" id="stWrong">0</div></div>
+
+          <div class="stat"><div class="k">Accuracy</div><div class="v" id="stAcc">0%</div></div>
+          <div class="stat"><div class="k">Streak</div><div class="v" id="stStreak">0</div></div>
+          <div class="stat"><div class="k">Best streak</div><div class="v" id="stBest">0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ---- PWA offline (service worker) ----
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    });
+  }
+
+  // --- Elements ---
+  const elStart = document.getElementById("startScore");
+  const elMax = document.getElementById("maxThrow");
+  const elRemaining = document.getElementById("remaining");
+  const elThrow = document.getElementById("throw");
+  const elLast = document.getElementById("lastDart");
+  const elCheckoutLine = document.getElementById("checkoutLine");
+  const elAnswer = document.getElementById("answer");
+  const elMsg = document.getElementById("message");
+
+  const btnCheck = document.getElementById("checkBtn");
+  const btnNext = document.getElementById("nextBtn");
+  const btnReset = document.getElementById("resetBtn");
+  const btnReveal = document.getElementById("revealBtn");
+
+  const optDoubleOut = document.getElementById("optDoubleOut");
+  const optBust = document.getElementById("optBust");
+  const optSuggest = document.getElementById("optSuggest");
+
+  const stTurns = document.getElementById("stTurns");
+  const stCorrect = document.getElementById("stCorrect");
+  const stWrong = document.getElementById("stWrong");
+  const stAcc = document.getElementById("stAcc");
+  const stStreak = document.getElementById("stStreak");
+  const stBest = document.getElementById("stBest");
+
+  // --- State ---
+  let start = 501;
+  let maxThrow = 180;
+  let remaining = 501;
+
+  // current visit
+  let currentThrow = null;     // visit total points
+  let currentLast = "—";       // e.g. D16
+  let lastIsDouble = false;    // true if last dart is double (incl D25)
+  let turnStart = 501;         // score at start of this visit (for bust rules)
+
+  // Stats
+  let turns = 0, correct = 0, wrong = 0, streak = 0, bestStreak = 0;
+
+  function setMessage(text, kind = "muted") {
+    elMsg.className = "msg " + kind;
+    elMsg.innerHTML = text;
+  }
+
+  function syncUI() {
+    elRemaining.textContent = remaining;
+    elThrow.textContent = (currentThrow === null) ? "—" : currentThrow;
+    elLast.textContent = currentLast;
+  }
+
+  function syncStats() {
+    stTurns.textContent = turns;
+    stCorrect.textContent = correct;
+    stWrong.textContent = wrong;
+    const acc = turns ? Math.round((correct / turns) * 100) : 0;
+    stAcc.textContent = acc + "%";
+    stStreak.textContent = streak;
+    stBest.textContent = bestStreak;
+  }
+
+  // ---- Dart options for suggesting checkouts ----
+  const singles = Array.from({length: 20}, (_, i) => ({ label: "S" + (i+1), score: i+1, isDouble: false }));
+  const doubles = Array.from({length: 20}, (_, i) => ({ label: "D" + (i+1), score: 2*(i+1), isDouble: true }));
+  const trebles = Array.from({length: 20}, (_, i) => ({ label: "T" + (i+1), score: 3*(i+1), isDouble: false }));
+  const bulls = [{ label: "S25", score: 25, isDouble: false }, { label: "D25", score: 50, isDouble: true }];
+
+  // Preference ordering: trebles high-to-low, singles high-to-low, bulls, then doubles (for non-last darts)
+  const prefDarts = [
+    ...trebles.slice().reverse(),    // T20..T1
+    ...singles.slice().reverse(),    // S20..S1
+    ...bulls,                        // S25, D25
+    ...doubles.slice().reverse()     // D20..D1
+  ];
+
+  // Last dart must be a double (if double-out enabled). Prefer D20..D1, then D25.
+  const prefLastDoubles = [...doubles.slice().reverse(), bulls[1]]; // D20..D1, D25
+
+  function suggestCheckoutFor(score, doubleOutEnabled) {
+    if (!optSuggest.checked) return "";
+    if (score <= 1) return "";
+    if (score > 170) return ""; // standard 3-dart checkout range
+
+    // Build last-dart list depending on double-out
+    const lastOptions = doubleOutEnabled ? prefLastDoubles : prefDarts;
+
+    // 1 dart
+    for (const a of lastOptions) {
+      if (a.score === score) return a.label;
+    }
+
+    // 2 darts
+    for (const a of prefDarts) {
+      for (const b of lastOptions) {
+        if (a.score + b.score === score) return `${a.label} ${b.label}`;
+      }
+    }
+
+    // 3 darts
+    for (const a of prefDarts) {
+      for (const b of prefDarts) {
+        for (const c of lastOptions) {
+          if (a.score + b.score + c.score === score) return `${a.label} ${b.label} ${c.label}`;
+        }
+      }
+    }
+
+    return ""; // no suggestion found (rare)
+  }
+
+  function updateCheckoutLine() {
+    if (!optSuggest.checked) {
+      elCheckoutLine.textContent = "";
+      return;
+    }
+    const route = suggestCheckoutFor(remaining, optDoubleOut.checked);
+    if (route) {
+      elCheckoutLine.innerHTML = `Suggested checkout: <b>${route}</b>`;
+      elCheckoutLine.className = "checkoutLine";
+    } else {
+      elCheckoutLine.textContent = "";
+    }
+  }
+
+  function resetVisitDisplay() {
+    currentThrow = null;
+    currentLast = "—";
+    lastIsDouble = false;
+    syncUI();
+  }
+
+  function resetGame() {
+    start = parseInt(elStart.value, 10);
+    maxThrow = parseInt(elMax.value, 10);
+    remaining = start;
+
+    turnStart = remaining;
+    resetVisitDisplay();
+
+    turns = 0; correct = 0; wrong = 0; streak = 0; bestStreak = 0;
+
+    elAnswer.value = "";
+    syncUI();
+    syncStats();
+    updateCheckoutLine();
+    setMessage('Tap <b>Next throw</b> to begin.', "muted");
+    elAnswer.focus();
+  }
+
+  // ---- Realistic visit generator (3 darts) ----
+  function randomDart() {
+    const r = Math.random();
+    if (r < 0.48) { // singles 1-20
+      const n = 1 + Math.floor(Math.random() * 20);
+      return { label: "S" + n, score: n, isDouble: false };
+    }
+    if (r < 0.74) { // doubles 1-20
+      const n = 1 + Math.floor(Math.random() * 20);
+      return { label: "D" + n, score: 2 * n, isDouble: true };
+    }
+    if (r < 0.98) { // trebles 1-20
+      const n = 1 + Math.floor(Math.random() * 20);
+      return { label: "T" + n, score: 3 * n, isDouble: false };
+    }
+    // bulls
+    return Math.random() < 0.5
+      ? { label: "S25", score: 25, isDouble: false }
+      : { label: "D25", score: 50, isDouble: true };
+  }
+
+  function generateVisit(maxTotal) {
+    while (true) {
+      const d1 = randomDart();
+      const d2 = randomDart();
+      const d3 = randomDart();
+      const total = d1.score + d2.score + d3.score;
+      if (total <= maxTotal) {
+        return { total, lastLabel: d3.label, lastIsDouble: d3.isDouble };
+      }
+    }
+  }
+
+  function newThrow() {
+    turnStart = remaining; // important for bust rules
+    const v = generateVisit(maxThrow);
+    currentThrow = v.total;
+    currentLast = v.lastLabel;
+    lastIsDouble = v.lastIsDouble;
+
+    elAnswer.value = "";
+    syncUI();
+    updateCheckoutLine();
+
+    let ruleText = "Subtract the visit total.";
+    if (optDoubleOut.checked) ruleText += " To win, you must hit <b>0</b> on a <b>double</b>.";
+    else ruleText += " To win, you must hit <b>exactly 0</b>.";
+
+    if (optBust.checked) ruleText += " Bust rules are <b>ON</b>.";
+    setMessage(ruleText, "muted");
+    elAnswer.focus();
+  }
+
+  function applyWrong(messageHtml) {
+    wrong += 1;
+    streak = 0;
+    syncStats();
+    setMessage(messageHtml, "bad");
+    elAnswer.select();
+    elAnswer.focus();
+  }
+
+  function applyBust(messageHtml) {
+    wrong += 1;        // count bust as wrong attempt
+    streak = 0;
+    remaining = turnStart; // reset to start of turn
+    syncUI();
+    updateCheckoutLine();
+    syncStats();
+    setMessage(messageHtml + ` <br><b>BUST</b> — score returns to <b>${turnStart}</b>.`, "bad");
+    // new throw after bust
+    setTimeout(newThrow, 500);
+  }
+
+  function finishWin() {
+    setMessage("🎯 Finished! You reached <b>0</b>. Tap <b>Reset</b> to play again.", "ok");
+    resetVisitDisplay();
+    updateCheckoutLine();
+  }
+
+  function checkAnswer() {
+    if (currentThrow === null) {
+      setMessage('Tap <b>Next throw</b> first.', "muted");
+      return;
+    }
+
+    const raw = elAnswer.value.trim();
+    if (raw === "" || isNaN(raw)) {
+      applyWrong("Type a number for the new total.");
+      return;
+    }
+
+    const ans = parseInt(raw, 10);
+    const expected = remaining - currentThrow;
+
+    turns += 1;
+
+    // Maths wrong: always just "wrong" (no bust), retry same throw
+    if (ans !== expected) {
+      applyWrong("❌ Wrong. Try again (same total, same throw).");
+      return;
+    }
+
+    // From here, maths is correct; now apply darts rules.
+    // Must not go negative if finishing exactly 0 only rules
+    if (expected < 0) {
+      if (optBust.checked) {
+        applyBust("❌ That would go below zero.");
+      } else {
+        applyWrong("❌ That would go below zero. You must finish on exactly <b>0</b>.");
+      }
+      return;
+    }
+
+    // Bust rule: leaving 1 is a bust in double-out games (and generally treated as bust in 501)
+    if (optBust.checked && expected === 1) {
+      applyBust("❌ You can’t finish from 1.");
+      return;
+    }
+
+    // If expected == 0, enforce double-out if enabled
+    if (expected === 0 && optDoubleOut.checked && !lastIsDouble) {
+      if (optBust.checked) {
+        applyBust(`❌ You hit 0, but the last dart was <b>${currentLast}</b> (not a double).`);
+      } else {
+        applyWrong(`❌ You hit 0, but the last dart was <b>${currentLast}</b> (not a double). Try again.`);
+      }
+      return;
+    }
+
+    // Correct and valid
+    correct += 1;
+    streak += 1;
+    if (streak > bestStreak) bestStreak = streak;
+
+    remaining = expected;
+    syncUI();
+    syncStats();
+    updateCheckoutLine();
+
+    if (remaining === 0) {
+      finishWin();
+      return;
+    }
+
+    setMessage(`✅ Correct! New total: <b>${remaining}</b>.`, "ok");
+    setTimeout(newThrow, 350);
+  }
+
+  function revealAnswer() {
+    if (currentThrow === null) {
+      setMessage('Tap <b>Next throw</b> first.', "muted");
+      return;
+    }
+    const expected = remaining - currentThrow;
+
+    let extra = "";
+    if (expected < 0) extra = " (would be below zero)";
+    if (expected === 1 && optBust.checked) extra = " (bust if bust rules are ON)";
+    if (expected === 0 && optDoubleOut.checked && !lastIsDouble) extra = ` (not a double finish: last dart ${currentLast})`;
+
+    setMessage(`Answer is <b>${expected}</b>${extra}.`, "muted");
+    elAnswer.value = expected;
+    elAnswer.focus();
+    elAnswer.select();
+  }
+
+  // Events
+  btnNext.addEventListener("click", newThrow);
+  btnCheck.addEventListener("click", checkAnswer);
+  btnReset.addEventListener("click", resetGame);
+  btnReveal.addEventListener("click", revealAnswer);
+
+  elStart.addEventListener("change", resetGame);
+  elMax.addEventListener("change", resetGame);
+
+  optDoubleOut.addEventListener("change", () => {
+    updateCheckoutLine();
+    setMessage("Option updated. (Double out)", "muted");
+  });
+  optBust.addEventListener("change", () => setMessage("Option updated. (Bust rules)", "muted"));
+  optSuggest.addEventListener("change", () => updateCheckoutLine());
+
+  elAnswer.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") checkAnswer();
+  });
+
+  // Init
+  resetGame();
+</script>
+</body>
+</html>
