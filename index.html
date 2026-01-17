@@ -1,12 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Darts Trainer</title>
-</head>
-<body>
-    <h1>Welcome to Darts Trainer</h1>
-    <p>Press Start to begin your practice session.</p>
-    <button id="start-button">Start</button>
-</body>
-</html>
+from dataclasses import dataclass, field
+
+@dataclass
+class DartsStats:
+    start_score: int = 501
+
+    # Running state
+    current_score: int = 501
+    visits: int = 0                  # each visit = up to 3 darts
+    darts_thrown: int = 0            # we assume 3 darts per visit unless you override
+    points_scored: int = 0
+
+    # Leg / finishing stats
+    legs_started: int = 0
+    legs_won: int = 0
+    checkout_attempts: int = 0       # visits where you had a finish available
+    busts: int = 0
+
+    # Turn stats
+    highest_turn: int = 0
+    turns: list[int] = field(default_factory=list)
+
+    # Milestones
+    n180: int = 0
+    n140plus: int = 0
+    n100plus: int = 0
+    n60plus: int = 0
+
+    def start_leg(self, start_score: int | None = None) -> None:
+        """Start a new leg."""
+        if start_score is not None:
+            self.start_score = start_score
+        self.current_score = self.start_score
+        self.legs_started += 1
+        # per-leg turn list can be kept if you want; this is overall for simplicity
+
+    def record_visit(self, turn_score: int, darts_used: int = 3, bust: bool = False, checkout_available: bool = False) -> None:
+        """
+        Record one visit (up to 3 darts).
+        - turn_score: points scored for the visit (0..180)
+        - darts_used: allow 1/2/3 darts if you want more accurate checkout averages
+        - bust: set True if the visit busted (score reverts, effectively 0 scored)
+        - checkout_available: set True if at the start of the visit you were on a finish (<=170 etc.)
+        """
+        self.visits += 1
+        self.darts_thrown += darts_used
+
+        if checkout_available:
+            self.checkout_attempts += 1
+
+        if bust:
+            self.busts += 1
+            turn_score_effective = 0
+        else:
+            turn_score_effective = max(0, min(180, turn_score))
+
+        self.turns.append(turn_score_effective)
+        self.points_scored += turn_score_effective
+        self.current_score -= turn_score_effective
+
+        # Track best turn + milestone buckets
+        if turn_score_effective > self.highest_turn:
+            self.highest_turn = turn_score_effective
+        if turn_score_effective == 180:
+            self.n180 += 1
+        if turn_score_effective >= 140:
+            self.n140plus += 1
+        if turn_score_effective >= 100:
+            self.n100plus += 1
+        if turn_score_effective >= 60:
+            self.n60plus += 1
+
+    def win_leg(self, darts_used_on_checkout: int | None = None) -> None:
+        """
+        Mark leg as won. Optionally adjust darts_thrown if you tracked a shorter checkout visit.
+        """
+        self.legs_won += 1
+        self.current_score = 0
+        if darts_used_on_checkout is not None:
+            # If your last visit used fewer darts than the default 3,
+            # you can correct darts_thrown externally before calling this,
+            # or use this to make an adjustment.
+            pass
+
+    # ---- Derived stats ----
+
+    def three_dart_average(self) -> float:
+        if self.darts_thrown == 0:
+            return 0.0
+        return (self.points_scored / self.darts_thrown) * 3.0
+
+    def first_9_dart_average(self) -> float:
+        # First 3 visits = 9 darts (assuming 3 darts/visit). Uses recorded turns.
+        first_three_visits = self.turns[:3]
+        if not first_three_visits:
+            return 0.0
+        points = sum(first_three_visits)
+        darts = 3 * len(first_three_visits)
+        return (points / darts) * 3.0
+
+    def checkout_percentage(self) -> float:
+        if self.checkout_attempts == 0:
+            return 0.0
+        # A simple definition: legs won / checkout attempts * 100
+        # If you want stricter: count only visits where you actually *threw at doubles*.
+        return (self.legs_won / self.checkout_attempts) * 100.0
+
+    def avg_per_visit(self) -> float:
+        if self.visits == 0:
+            return 0.0
+        return self.points_scored / self.visits
+
+    def summary(self) -> str:
+        return (
+            f"Score: {self.current_score}\n"
+            f"Visits: {self.visits} | Darts: {self.darts_thrown} | Points: {self.points_scored}\n"
+            f"3DA: {self.three_dart_average():.2f} | First 9: {self.first_9_dart_average():.2f} | "
+            f"Avg/visit: {self.avg_per_visit():.2f}\n"
+            f"Checkout%: {self.checkout_percentage():.1f}% | Busts: {self.busts} | High turn: {self.highest_turn}\n"
+            f"180s: {self.n180} | 140+: {self.n140plus} | 100+: {self.n100plus} | 60+: {self.n60plus}\n"
+            f"Legs: {self.legs_won}/{self.legs_started}"
+        )
